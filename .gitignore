@@ -1,0 +1,8 @@
+.cache/
+.mypy_cache/
+.vscode/
+__pycache__
+*.pyc
+memevault.db
+compile_commands.json
+.env
