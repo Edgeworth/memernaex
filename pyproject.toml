@@ -3,8 +3,7 @@ authors = ["Eliot Courtney <edgeworth.dev@gmail.com>"]
 classifiers = ["License :: OSI Approved :: GPL-3.0-only"]
 description = "memerna extra programs"
 name = "memernaex"
-readme = "README.md"
-version = "0.1.0"
+version = "0.2.0"
 
 [tool.poetry.dependencies]
 bidict = ">=0.23.1"
@@ -12,10 +11,12 @@ click = ">=8.2.1"
 click-params = ">=0.5.0"
 click_log = ">=0.4.0"
 cloup = ">=3.0.7"
+matplotlib = ">=3.10.3"
 python = ">=3.11,<4.0"
 rnapy = {git = "https://github.com/Edgeworth/memerna.git", rev = "main"}
-torch = ">=2.7.1"
-torch-tb-profiler = ">=0.4.3"
+seaborn = ">=0.13.2"
+statsmodels = ">=0.14.4"
+viennarna = ">=2.7.0"
 
 [tool.poetry.group.dev.dependencies]
 mypy = ">=1.16.0"
@@ -67,7 +68,7 @@ module = [
 
 [tool.ruff]
 line-length = 100
-target-version = "py312"
+target-version = "py313"
 
 [tool.ruff.format]
 # Make sure lists etc can go back onto one line if they get shorter.
