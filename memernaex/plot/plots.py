@@ -2,13 +2,14 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
-import matplotlib as mpl
 import numpy as np
 import seaborn as sns
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
 from bidict import bidict
 from matplotlib import pyplot as plt
+from matplotlib import ticker
+from matplotlib.figure import Figure
 from rnapy.analysis.metrics import Dataset
 from rnapy.util.util import stable_hash
 
@@ -19,7 +20,7 @@ from memernaex.plot.util import get_marker, get_subplot_grid, set_up_figure
 class Column:
     idx: str
     name: str
-    formatter: mpl.ticker.FuncFormatter | None = None
+    formatter: ticker.FuncFormatter | None = None
 
     def __str__(self) -> str:
         return self.idx
@@ -29,25 +30,25 @@ def _color(name: str, palette: Sequence[Any] | None = None) -> Any:
     color_map: bidict = getattr(_color, "color_map", bidict())
     _color.color_map = color_map  # type: ignore[attr-defined]
 
-    print(color_map)
+    if name in color_map:
+        return color_map[name]
 
     if palette is None:
-        palette = sns.utils.get_color_cycle()
+        palette = sns.color_palette()
 
-    if name not in color_map:
-        start_idx = stable_hash(name) % len(palette)
-        idx = start_idx
-        while palette[idx] in color_map.inverse:
-            idx = (idx + 1) % len(palette)
-            if idx == start_idx:
-                raise ValueError("No free color available in the palette.")
+    start_idx = stable_hash(name) % len(palette)
+    idx = start_idx
+    while palette[idx] in color_map.inverse:
+        idx = (idx + 1) % len(palette)
+        if idx == start_idx:
+            raise ValueError("No free color available in the palette.")
 
-        color_map[name] = palette[idx]
+    color_map[name] = palette[idx]
 
     return color_map[name]
 
 
-def plot_mean_quantity(ds: Dataset, xcol: Column, ycols: list[Column] | Column) -> plt.Figure:
+def plot_mean_quantity(ds: Dataset, xcol: Column, ycols: list[Column] | Column) -> Figure:
     if not isinstance(ycols, list):
         ycols = [ycols]
     f, ax = plt.subplots(1)
@@ -62,7 +63,9 @@ def plot_mean_quantity(ds: Dataset, xcol: Column, ycols: list[Column] | Column) 
                 df.mean(), x=x, y=y, label=did, ax=ax, color=_color(did), **get_marker(idx)
             )
             low, high = df[y].min(), df[y].max()
-            ax.fill_between(sorted(df.groups), low, high, alpha=0.2, color=_color(did))
+            ax.fill_between(
+                sorted(df.groups), low, high, alpha=0.2, color=_color(did)
+            )
 
     set_up_figure(f, names=(xcol.name, ycols[0].name))
     if ycols[0].formatter:
@@ -73,7 +76,7 @@ def plot_mean_quantity(ds: Dataset, xcol: Column, ycols: list[Column] | Column) 
 
 def plot_mean_log_quantity(
     ds: Dataset, xcol: Column, ycol: Column, logx: bool = True, logy: bool = True
-) -> plt.Figure:
+) -> Figure:
     ep = 1e-2
 
     f, axes = get_subplot_grid(len(ds), sharex=True, sharey=True)

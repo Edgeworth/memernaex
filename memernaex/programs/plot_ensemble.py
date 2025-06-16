@@ -5,6 +5,7 @@ import cloup
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
+from matplotlib import ticker
 
 
 def read_free_energies_from_file(filepath: Path) -> np.ndarray | None:
@@ -120,7 +121,7 @@ def plot_ensemble(input_file: Path, output_dir: Path, temperature: float, k_cal:
 
     if len(bin_centers) > 20:
         plt.xticks(rotation=45, ha="right")
-        plt.gca().xaxis.set_major_locator(plt.MaxNLocator(nbins=20))
+        plt.gca().xaxis.set_major_locator(ticker.MaxNLocator(nbins=20))
 
     boltzmann_plot_path = output_dir / "boltzmann_distribution.png"
     plt.tight_layout()

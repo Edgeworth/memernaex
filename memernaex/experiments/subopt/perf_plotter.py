@@ -2,8 +2,8 @@
 from pathlib import Path
 from typing import ClassVar
 
-import matplotlib as mpl
 import pandas as pd
+from matplotlib import ticker
 from rnapy.analysis.metrics import Dataset
 from rnapy.util.format import human_size
 
@@ -21,7 +21,7 @@ class SuboptPerfPlotter:
         "maxrss_bytes": Column(
             idx="maxrss_bytes",
             name="Maximum RSS (B)",
-            formatter=mpl.ticker.FuncFormatter(lambda x, _: human_size(x, False)),
+            formatter=ticker.FuncFormatter(lambda x, _: human_size(x, False)),
         ),
     }
     input_dir: Path
