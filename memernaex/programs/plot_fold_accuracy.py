@@ -8,8 +8,8 @@ from memernaex.experiments.fold.accuracy_plotter import FoldAccuracyPlotter
 
 @cloup.command()
 @cloup.option(
-    "--input-dir",
-    type=cloup.Path(dir_okay=True, file_okay=False, exists=True, path_type=Path),
+    "--input-path",
+    type=cloup.Path(dir_okay=False, file_okay=True, exists=True, path_type=Path),
     required=True,
 )
 @cloup.option(
@@ -17,6 +17,6 @@ from memernaex.experiments.fold.accuracy_plotter import FoldAccuracyPlotter
     type=cloup.Path(dir_okay=True, file_okay=False, exists=True, path_type=Path),
     required=True,
 )
-def plot_fold_accuracy(input_dir: Path, output_dir: Path) -> None:
-    plotter = FoldAccuracyPlotter(input_dir, output_dir)
+def plot_fold_accuracy(input_path: Path, output_dir: Path) -> None:
+    plotter = FoldAccuracyPlotter(input_path, output_dir)
     plotter.run()

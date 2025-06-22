@@ -8,8 +8,8 @@ from memernaex.experiments.fold.perf_plotter import FoldPerfPlotter
 
 @cloup.command()
 @cloup.option(
-    "--input-dir",
-    type=cloup.Path(dir_okay=True, file_okay=False, exists=True, path_type=Path),
+    "--input-path",
+    type=cloup.Path(dir_okay=False, file_okay=True, exists=True, path_type=Path),
     required=True,
 )
 @cloup.option(
@@ -17,6 +17,6 @@ from memernaex.experiments.fold.perf_plotter import FoldPerfPlotter
     type=cloup.Path(dir_okay=True, file_okay=False, exists=True, path_type=Path),
     required=True,
 )
-def plot_fold_perf(input_dir: Path, output_dir: Path) -> None:
-    plotter = FoldPerfPlotter(input_dir, output_dir)
+def plot_fold_perf(input_path: Path, output_dir: Path) -> None:
+    plotter = FoldPerfPlotter(input_path, output_dir)
     plotter.run()

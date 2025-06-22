@@ -2,9 +2,8 @@
 from pathlib import Path
 from typing import ClassVar
 
-import pandas as pd
+import polars as pl
 from matplotlib import ticker
-from rnapy.analysis.metrics import Dataset
 from rnapy.util.format import human_size
 
 from memernaex.plot.plots import Column, plot_mean_log_quantity, plot_mean_quantity
@@ -24,42 +23,35 @@ class FoldPerfPlotter:
             formatter=ticker.FuncFormatter(lambda x, _: human_size(x, False)),
         ),
     }
-    input_dir: Path
+    df: pl.DataFrame
     output_dir: Path
 
-    def __init__(self, input_dir: Path, output_dir: Path) -> None:
-        self.input_dir = input_dir
+    def __init__(self, input_path: Path, output_dir: Path) -> None:
+        self.df = pl.read_json(input_path)
         self.output_dir = output_dir
         set_style()
 
-    def _load_datasets(self) -> dict[str, Dataset]:
-        datasets: dict[str, Dataset] = {}
-        for path in self.input_dir.glob("*.results"):
-            dataset, program = path.stem.rsplit("_", maxsplit=1)
-            df = pd.read_csv(path)
-            datasets.setdefault(dataset, Dataset(dataset))
-            datasets[dataset].dfs[program] = df
-        return datasets
+    def _path(self, name: str) -> Path:
+        return self.output_dir / f"{name}.png"
 
-    def _path(self, ds: Dataset, name: str) -> Path:
-        return self.output_dir / f"{ds.name}_{name}.png"
-
-    def _plot_quantity(self, ds: Dataset, name: str = "") -> None:
+    def _plot_quantity(self, df: pl.DataFrame, name: str) -> None:
         for y in ["real_sec", "maxrss_bytes"]:
-            f = plot_mean_quantity(ds, self.COLS["length"], self.COLS[y])
-            save_figure(f, self._path(ds, name + y))
+            f = plot_mean_quantity(df, "program", self.COLS["length"], self.COLS[y])
+            save_figure(f, self._path(name + y))
 
     def run(self) -> None:
-        datasets = self._load_datasets()
         # Plot quantities
-        for ds in datasets.values():
-            self._plot_quantity(ds)
+        for group, df in self.df.group_by("dataset"):
+            dataset_name = str(group[0])
+            self._plot_quantity(df, dataset_name)
 
             # Also plot random dataset without RNAstructure and ViennaRNA-d3
-            if ds.name == "random":
-                subset_ds = ds.exclude(["RNAstructure", "ViennaRNA-d3", "ViennaRNA-d3-noLP"])
-                self._plot_quantity(subset_ds, "subset_")
+            if dataset_name == "random":
+                subset_df = df.filter(
+                    ~pl.col("program").is_in(["RNAstructure", "ViennaRNA-d3", "ViennaRNA-d3-noLP"])
+                )
+                self._plot_quantity(subset_df, f"{dataset_name}_subset_")
 
             for y in ["real_sec", "maxrss_bytes"]:
-                f = plot_mean_log_quantity(ds, self.COLS["length"], self.COLS[y])
-                save_figure(f, self._path(ds, f"{y}_log"))
+                f = plot_mean_log_quantity(df, "program", self.COLS["length"], self.COLS[y])
+                save_figure(f, self._path(f"{dataset_name}_{y}_log"))

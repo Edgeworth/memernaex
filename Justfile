@@ -1,5 +1,4 @@
 set positional-arguments
-alias t := test
 alias f := fix
 alias u := update
 
@@ -13,3 +12,8 @@ update:
   poetry run poetry up --latest
   poetry update
   pre-commit autoupdate
+
+check:
+  poetry check
+  poetry run mypy --install-types --non-interactive
+  pre-commit run --all-files

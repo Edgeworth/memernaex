@@ -1,22 +1,32 @@
-[tool.poetry]
-authors = ["Eliot Courtney <edgeworth.dev@gmail.com>"]
-classifiers = ["License :: OSI Approved :: GPL-3.0-only"]
+[project]
+authors = [{name = "Eliot Courtney", email = "edgeworth.dev@gmail.com"}]
 description = "memerna extra programs"
+dynamic = ["dependencies"]
+license = {text = "GPL-3.0-only"}
 name = "memernaex"
+requires-python = ">=3.13,<4.0"
 version = "0.2.0"
 
+[build-system]
+build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core>=1.0.0"]
+
+[tool.poetry]
+packages = [{include = "memernaex"}]
+
 [tool.poetry.dependencies]
-bidict = ">=0.23.1"
-click = ">=8.2.1"
-click-params = ">=0.5.0"
-click_log = ">=0.4.0"
-cloup = ">=3.0.7"
-matplotlib = ">=3.10.3"
-python = ">=3.11,<4.0"
-rnapy = {git = "https://github.com/Edgeworth/memerna.git", rev = "main"}
-seaborn = ">=0.13.2"
-statsmodels = ">=0.14.4"
-viennarna = ">=2.7.0"
+bidict = ">=0.23.1" 
+click = ">=8.2.1" 
+click-params = ">=0.5.0" 
+click_log = ">=0.4.0" 
+cloup = ">=3.0.7" 
+matplotlib = ">=3.10.3" 
+polars = ">=1.31.0" 
+rnapy = {git = "https://github.com/Edgeworth/memerna.git", rev = "main"} 
+scipy = "1.15.3" # https://github.com/statsmodels/statsmodels/issues/9584
+seaborn = ">=0.13.2" 
+statsmodels = ">=0.14.4" 
+viennarna = ">=2.7.0" 
 
 [tool.poetry.group.dev.dependencies]
 mypy = ">=1.16.0"
@@ -99,6 +109,7 @@ ignore = [
   "PD901", # allow 'df'
   "PLR0912", # allow more branches in functions
   "PLR0913", # allow more arguments in functions
+  "PLR0915", # allow more statements in functions
   "PLR2004", # allow magic numbers
   "PYI021", # allow docstrings in stubs
   "RET504", # allow return statements after assignment of variable
