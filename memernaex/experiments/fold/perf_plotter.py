@@ -27,7 +27,7 @@ class FoldPerfPlotter:
     output_dir: Path
 
     def __init__(self, input_path: Path, output_dir: Path) -> None:
-        self.df = pl.read_json(input_path)
+        self.df = pl.read_ndjson(input_path)
         self.output_dir = output_dir
         set_style()
 
