@@ -6,7 +6,7 @@ import polars as pl
 from matplotlib import ticker
 from rnapy.util.format import human_size
 
-from memernaex.plot.plots import Column, plot_mean_log_quantity, plot_mean_quantity
+from memernaex.plot.plots import Column, plot_mean_quantity
 from memernaex.plot.util import save_figure, set_style
 
 
@@ -37,28 +37,49 @@ class SuboptPerfPlotter:
         "sys_sec": Column(idx="sys_sec", name="Sys time (s)"),
         "real_sec": Column(idx="real_sec", name="Wall time (s)"),
         "failed": Column(idx="failed", name="Failed"),
+        # Derived columns:
+        "strucs_per_sec": Column(idx="strucs_per_sec", name="Structures per second"),
     }
+    GROUP_VARS: ClassVar[list[str]] = [
+        "count_only",
+        "ctd",
+        "dataset",
+        "delta",
+        "lonely_pairs",
+        "sorted_strucs",
+        "strucs",
+        "time_secs",
+    ]
+
     df: pl.DataFrame
     output_dir: Path
 
     def __init__(self, input_path: Path, output_dir: Path) -> None:
         self.df = pl.read_ndjson(input_path)
         self.output_dir = output_dir
+
+        # Add column for program identifier.
+        self.df = self.df.with_columns(
+            pl.format("{}-{}-{}-{}", "package_name", "ctd", "algorithm", "backend").alias(
+                "program"
+            ),
+            (pl.col("output_strucs") / pl.col("real_sec")).alias("strucs_per_sec"),
+        )
+
+        # Remove any rows with failed true.
+        self.df = self.df.filter(~pl.col("failed"))
+
         set_style()
 
     def _path(self, name: str) -> Path:
         return self.output_dir / f"{name}.png"
 
-    def _plot_quantity(self, name: str = "") -> None:
-        for y in ["real_sec", "maxrss_bytes"]:
-            f = plot_mean_quantity(self.df, "package_name", self.COLS["rna_length"], self.COLS[y])
-            save_figure(f, self._path(name + y))
+    def _plot_quantity(self, name: str) -> None:
+        for group, df in self.df.group_by(self.GROUP_VARS):
+            group_name = "_".join(str(x) for x in group)
+            for y in ["strucs_per_sec", "maxrss_bytes"]:
+                f = plot_mean_quantity(df, "program", self.COLS["rna_length"], self.COLS[y])
+                save_figure(f, self._path(f"{name}_{group_name}_{y}"))
 
     def run(self) -> None:
-        self._plot_quantity()
-
-        for y in ["real_sec", "maxrss_bytes"]:
-            f = plot_mean_log_quantity(
-                self.df, "package_name", self.COLS["rna_length"], self.COLS[y]
-            )
-            save_figure(f, self._path(f"{y}_log"))
+        self._plot_quantity("quantity")
