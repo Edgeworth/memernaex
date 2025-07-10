@@ -5,7 +5,6 @@ import click_log
 import cloup
 from dotenv import load_dotenv
 
-from memernaex.programs.analyze_subopt_perf import analyze_subopt_perf
 from memernaex.programs.compare_partition import compare_partition
 from memernaex.programs.crop_image import crop_image
 from memernaex.programs.parse_rnastructure_datatables import parse_rnastructure_datatables
@@ -33,7 +32,6 @@ def cli() -> None:
 
 
 cli.section("Plots", plot_ensemble, plot_fold_accuracy, plot_fold_perf, plot_subopt_perf)
-cli.section("Analysis", analyze_subopt_perf)
 cli.section("Utilities", compare_partition, crop_image, parse_rnastructure_datatables)
 
 if __name__ == "__main__":
