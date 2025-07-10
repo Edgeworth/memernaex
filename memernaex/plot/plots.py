@@ -28,19 +28,21 @@ class Column:
 def _color(name: str, palette: Sequence[Any] | None = None) -> Any:
     color_map: bidict = getattr(_color, "color_map", bidict())
     _color.color_map = color_map  # type: ignore[attr-defined]
-
+    print(name, color_map.keys())
     if name in color_map:
         return color_map[name]
 
     if palette is None:
-        palette = sns.color_palette()
+        palette = sns.color_palette("husl", n_colors=12)
+        print(len(set(palette)))
 
     start_idx = stable_hash(name) % len(palette)
     idx = start_idx
     while palette[idx] in color_map.inverse:
         idx = (idx + 1) % len(palette)
+        print(idx, start_idx)
         if idx == start_idx:
-            raise ValueError("No free color available in the palette.")
+            raise ValueError(f"No free color available in the palette: {len(palette)}")
 
     color_map[name] = palette[idx]
 
