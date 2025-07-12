@@ -6,8 +6,9 @@ from matplotlib import ticker
 from rnapy.util.format import human_size
 from scipy.stats import ttest_rel
 
+from memernaex.analysis.data import Var
 from memernaex.plot.plots import plot_mean_quantity
-from memernaex.plot.util import Var, save_figure, set_style
+from memernaex.plot.util import save_figure, set_style
 
 
 class FoldAccuracyPlotter:

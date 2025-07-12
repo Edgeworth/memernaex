@@ -1,25 +1,16 @@
 from collections.abc import Sequence
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-import polars as pl
 import seaborn as sns
 from bidict import bidict
 from matplotlib import pyplot as plt
-from matplotlib import ticker
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import Axes3D
 from rnapy.util.util import stable_hash
 
-
-@dataclass(frozen=True, eq=True, order=True, kw_only=True)
-class Var:
-    id: str
-    name: str
-    dtype: type[pl.DataType]
-    formatter: ticker.FuncFormatter | None = None
+from memernaex.analysis.data import Var
 
 
 def set_style() -> None:

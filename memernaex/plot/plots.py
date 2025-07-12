@@ -7,7 +7,8 @@ import statsmodels.formula.api as smf
 from matplotlib import pyplot as plt
 from matplotlib.figure import Figure
 
-from memernaex.plot.util import Var, get_color, get_marker, get_subplot_grid, set_up_figure_2d
+from memernaex.analysis.data import Var
+from memernaex.plot.util import get_color, get_marker, get_subplot_grid, set_up_figure_2d
 
 
 def plot_mean_quantity(

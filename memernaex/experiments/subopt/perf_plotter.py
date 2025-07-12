@@ -8,8 +8,9 @@ from matplotlib import ticker
 from rnapy.util.format import human_size
 
 from memernaex.analysis.complexity import ComplexityFitter
+from memernaex.analysis.data import Var
 from memernaex.plot.plots import plot_mean_quantity
-from memernaex.plot.util import Var, save_figure, set_style
+from memernaex.plot.util import save_figure, set_style
 
 
 class SuboptPerfPlotter:

@@ -10,7 +10,8 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 from mpl_toolkits.mplot3d import Axes3D
 
-from memernaex.plot.util import Var, set_up_figure_2d, set_up_figure_3d
+from memernaex.analysis.data import Var
+from memernaex.plot.util import set_up_figure_2d, set_up_figure_3d
 
 
 def _model_constant(x: tuple[npt.NDArray, ...], b: float) -> Any:
