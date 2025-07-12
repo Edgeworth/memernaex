@@ -1,28 +1,26 @@
 # Copyright 2022 Eliot Courtney.
 from pathlib import Path
-from typing import ClassVar
 
 import polars as pl
 from matplotlib import ticker
 from rnapy.util.format import human_size
 
-from memernaex.plot.plots import Column, plot_mean_log_quantity, plot_mean_quantity
-from memernaex.plot.util import save_figure, set_style
+from memernaex.plot.plots import plot_mean_log_quantity, plot_mean_quantity
+from memernaex.plot.util import Var, save_figure, set_style
 
 
 class FoldPerfPlotter:
-    COLS: ClassVar[dict[str, Column]] = {
-        "name": Column(idx="name", name="Name"),
-        "length": Column(idx="length", name="Length (nuc)"),
-        "real_sec": Column(idx="real_sec", name="Wall time (s)"),
-        "user_sec": Column(idx="user_sec", name="User time (s)"),
-        "sys_sec": Column(idx="sys_sec", name="Sys time (s)"),
-        "maxrss_bytes": Column(
-            idx="maxrss_bytes",
-            name="Maximum RSS (B)",
-            formatter=ticker.FuncFormatter(lambda x, _: human_size(x, False)),
-        ),
-    }
+    VAR_NAME = Var(id="name", name="Name")
+    VAR_LENGTH = Var(id="length", name="Length (nuc)")
+    VAR_REAL_SEC = Var(id="real_sec", name="Wall time (s)")
+    VAR_USER_SEC = Var(id="user_sec", name="User time (s)")
+    VAR_SYS_SEC = Var(id="sys_sec", name="Sys time (s)")
+    VAR_MAXRSS_BYTES = Var(
+        id="maxrss_bytes",
+        name="Maximum RSS (B)",
+        formatter=ticker.FuncFormatter(lambda x, _: human_size(x, False)),
+    )
+    VAR_PROGRAM = Var(id="program", name="Program")
     df: pl.DataFrame
     output_dir: Path
 
@@ -35,9 +33,10 @@ class FoldPerfPlotter:
         return self.output_dir / f"{name}.png"
 
     def _plot_quantity(self, df: pl.DataFrame, name: str) -> None:
-        for y in ["real_sec", "maxrss_bytes"]:
-            f = plot_mean_quantity(df, "program", self.COLS["length"], self.COLS[y])
-            save_figure(f, self._path(name + y))
+        y_vars = [self.VAR_REAL_SEC, self.VAR_MAXRSS_BYTES]
+        for y_var in y_vars:
+            f = plot_mean_quantity(df, self.VAR_PROGRAM, self.VAR_LENGTH, y_var)
+            save_figure(f, self._path(name + y_var.id))
 
     def run(self) -> None:
         # Plot quantities
@@ -52,6 +51,7 @@ class FoldPerfPlotter:
                 )
                 self._plot_quantity(subset_df, f"{dataset_name}_subset_")
 
-            for y in ["real_sec", "maxrss_bytes"]:
-                f = plot_mean_log_quantity(df, "program", self.COLS["length"], self.COLS[y])
-                save_figure(f, self._path(f"{dataset_name}_{y}_log"))
+            y_vars = [self.VAR_REAL_SEC, self.VAR_MAXRSS_BYTES]
+            for y_var in y_vars:
+                f = plot_mean_log_quantity(df, self.VAR_PROGRAM, self.VAR_LENGTH, y_var)
+                save_figure(f, self._path(f"{dataset_name}_{y_var.id}_log"))

@@ -3,45 +3,46 @@ from pathlib import Path
 from typing import ClassVar
 
 import polars as pl
-from matplotlib import pyplot, ticker
+from matplotlib import pyplot as plt
+from matplotlib import ticker
 from rnapy.util.format import human_size
 
 from memernaex.analysis.complexity import ComplexityFitter
-from memernaex.plot.plots import Column, plot_mean_quantity
-from memernaex.plot.util import save_figure, set_style
+from memernaex.plot.plots import plot_mean_quantity
+from memernaex.plot.util import Var, save_figure, set_style
 
 
 class SuboptPerfPlotter:
-    COLS: ClassVar[dict[str, Column]] = {
-        "package_name": Column(idx="package_name", name="Package Name"),
-        "ctd": Column(idx="ctd", name="CTD"),
-        "lonely_pairs": Column(idx="lonely_pairs", name="Lonely Pairs"),
-        "energy_model": Column(idx="energy_model", name="Energy Model"),
-        "backend": Column(idx="backend", name="Backend"),
-        "sorted_strucs": Column(idx="sorted_strucs", name="Sorted Structures"),
-        "delta": Column(idx="delta", name="Delta"),
-        "strucs": Column(idx="strucs", name="Structures"),
-        "time_secs": Column(idx="time_secs", name="Time (s)"),
-        "count_only": Column(idx="count_only", name="Count Only"),
-        "algorithm": Column(idx="algorithm", name="Algorithm"),
-        "dataset": Column(idx="dataset", name="Dataset"),
-        "rna_name": Column(idx="rna_name", name="RNA Name"),
-        "rna_length": Column(idx="rna_length", name="Length (nuc)"),
-        "run_idx": Column(idx="run_idx", name="Run Index"),
-        "output_strucs": Column(idx="output_strucs", name="Output Structures"),
-        "maxrss_bytes": Column(
-            idx="maxrss_bytes",
-            name="Maximum RSS (B)",
-            formatter=ticker.FuncFormatter(lambda x, _: human_size(x, False)),
-        ),
-        "user_sec": Column(idx="user_sec", name="User time (s)"),
-        "sys_sec": Column(idx="sys_sec", name="Sys time (s)"),
-        "real_sec": Column(idx="real_sec", name="Wall time (s)"),
-        "failed": Column(idx="failed", name="Failed"),
-        # Derived columns:
-        "strucs_per_sec": Column(idx="strucs_per_sec", name="Structures per second"),
-        "bases_per_byte": Column(idx="bases_per_byte", name="Bases per byte"),
-    }
+    VAR_PACKAGE_NAME = Var(id="package_name", name="Package Name")
+    VAR_CTD = Var(id="ctd", name="CTD")
+    VAR_LONELY_PAIRS = Var(id="lonely_pairs", name="Lonely Pairs")
+    VAR_ENERGY_MODEL = Var(id="energy_model", name="Energy Model")
+    VAR_BACKEND = Var(id="backend", name="Backend")
+    VAR_SORTED_STRUCS = Var(id="sorted_strucs", name="Sorted Structures")
+    VAR_DELTA = Var(id="delta", name="Delta")
+    VAR_STRUCS = Var(id="strucs", name="Structures")
+    VAR_TIME_SECS = Var(id="time_secs", name="Time (s)")
+    VAR_COUNT_ONLY = Var(id="count_only", name="Count Only")
+    VAR_ALGORITHM = Var(id="algorithm", name="Algorithm")
+    VAR_DATASET = Var(id="dataset", name="Dataset")
+    VAR_RNA_NAME = Var(id="rna_name", name="RNA Name")
+    VAR_RNA_LENGTH = Var(id="rna_length", name="Length (nuc)")
+    VAR_RUN_ID = Var(id="run_id", name="Run Index")
+    VAR_OUTPUT_STRUCS = Var(id="output_strucs", name="Output Structures")
+    VAR_MAXRSS_BYTES = Var(
+        id="maxrss_bytes",
+        name="Maximum RSS (B)",
+        formatter=ticker.FuncFormatter(lambda x, _: human_size(x, False)),
+    )
+    VAR_USER_SEC = Var(id="user_sec", name="User time (s)")
+    VAR_SYS_SEC = Var(id="sys_sec", name="Sys time (s)")
+    VAR_REAL_SEC = Var(id="real_sec", name="Wall time (s)")
+    VAR_FAILED = Var(id="failed", name="Failed")
+    # Derived vars:
+    VAR_STRUCS_PER_SEC = Var(id="strucs_per_sec", name="Structures per second")
+    VAR_BASES_PER_BYTE = Var(id="bases_per_byte", name="Bases per byte")
+    VAR_PROGRAM = Var(id="program", name="Program")
+
     GROUP_VARS: ClassVar[list[str]] = [
         "count_only",
         "ctd",
@@ -91,23 +92,26 @@ class SuboptPerfPlotter:
     def _plot_quantity(self, name: str) -> None:
         for group, df in self.df.group_by(self.GROUP_VARS):
             group_name = "_".join(str(x) for x in group)
-            for y in ["strucs_per_sec", "bases_per_byte", "maxrss_bytes"]:
-                f = plot_mean_quantity(df, "program", self.COLS["rna_length"], self.COLS[y])
-                save_figure(f, self._path(f"{name}_{group_name}_{y}"))
+            y_vars = [self.VAR_STRUCS_PER_SEC, self.VAR_BASES_PER_BYTE, self.VAR_MAXRSS_BYTES]
+            for y_var in y_vars:
+                f = plot_mean_quantity(df, self.VAR_PROGRAM, self.VAR_RNA_LENGTH, y_var)
+                save_figure(f, self._path(f"{name}_{group_name}_{y_var.id}"))
 
     def _analyze_complexity(self) -> None:
-        for group, df in self.df.group_by(self.PACKAGE_VARS):
+        for group, group_df in self.df.group_by(self.PACKAGE_VARS):
             # Split into two dfs - ones with "delta" non-empty and ones with "strucs" non-empty.
-            df = df.filter(pl.col("delta").str.len_chars() > 0)
+            df = group_df.filter(pl.col("delta").str.len_chars() > 0)
             print(df)
             group_name = "_".join(str(x) for x in group)
             print(group_name)
-            fitter = ComplexityFitter(df)
-            name, result = fitter.fit2d(xs=("delta", "rna_length"), y="real_sec")
+            fitter = ComplexityFitter(
+                df=df, xs=(self.VAR_DELTA, self.VAR_RNA_LENGTH), y=self.VAR_REAL_SEC
+            )
+            name, result = fitter.fit()
             print(f"Best model: {name}")
             print(result.fit_report())
             result.plot()
-            pyplot.show(block=True)
+            plt.show(block=True)
             break
 
     def run(self) -> None:

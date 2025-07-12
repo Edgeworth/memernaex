@@ -1,10 +1,22 @@
+from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import seaborn as sns
+from bidict import bidict
 from matplotlib import pyplot as plt
+from matplotlib import ticker
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
+from rnapy.util.util import stable_hash
+
+
+@dataclass(frozen=True, eq=True, order=True, kw_only=True)
+class Var:
+    id: str
+    name: str
+    formatter: ticker.FuncFormatter | None = None
 
 
 def set_style() -> None:
@@ -38,9 +50,34 @@ def get_subplot_grid(
     return f, axes
 
 
-def get_marker(idx: int) -> dict[str, Any]:
+def get_color(name: str, palette: Sequence[Any] | None = None) -> Any:
+    color_map: bidict = getattr(get_color, "color_map", bidict())
+    get_color.color_map = color_map  # type: ignore[attr-defined]
+    print(name, color_map.keys())
+    if name in color_map:
+        return color_map[name]
+
+    if palette is None:
+        palette = sns.color_palette("husl", n_colors=12)
+        print(len(set(palette)))
+
+    start_idx = stable_hash(name) % len(palette)
+    idx = start_idx
+    while palette[idx] in color_map.inverse:
+        idx = (idx + 1) % len(palette)
+        print(idx, start_idx)
+        if idx == start_idx:
+            raise ValueError(f"No free color available in the palette: {len(palette)}")
+
+    color_map[name] = palette[idx]
+
+    return color_map[name]
+
+
+def get_marker(name: int | str) -> dict[str, Any]:
     markers = " ov^sp*+xD|"
-    return {"marker": markers[idx % len(markers)], "markersize": 5, "markevery": 5}
+    idx = stable_hash(name) % len(markers)
+    return {"marker": markers[idx], "markersize": 5, "markevery": 5}
 
 
 def save_figure(f: Figure, path: Path) -> None:
@@ -49,15 +86,18 @@ def save_figure(f: Figure, path: Path) -> None:
     plt.close(f)
 
 
-def set_up_axis(ax: Axes, names: tuple[str, str], legend: bool = True) -> None:
-    for i, axis in [(0, ax.xaxis), (1, ax.yaxis)]:
-        if names[i] is not None:
-            axis.set_label_text(names[i])
+def set_up_axis(ax: Axes, varz: tuple[Var, Var], legend: bool = True) -> None:
     if legend:
-        ax.legend(loc=0, fontsize="medium")
+        ax.legend(loc="best", framealpha=0.5, fontsize="medium")
+    ax.set_xlabel(varz[0].name)
+    ax.set_ylabel(varz[1].name)
+    if varz[0].formatter:
+        ax.xaxis.set_major_formatter(varz[0].formatter)
+    if varz[1].formatter:
+        ax.yaxis.set_major_formatter(varz[1].formatter)
 
 
-def set_up_figure(f: Figure, names: tuple[str, str], legend: bool = True) -> None:
-    f.suptitle(f"{names[0]} vs {names[1]}", y=1.00)
+def set_up_figure(f: Figure, varz: tuple[Var, Var], legend: bool = True) -> None:
+    f.suptitle(f"{varz[0]} vs {varz[1]}", y=1.00)
     for ax in f.get_axes():
-        set_up_axis(ax, names, legend)
+        set_up_axis(ax, varz, legend)
