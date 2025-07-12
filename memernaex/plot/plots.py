@@ -7,7 +7,7 @@ import statsmodels.formula.api as smf
 from matplotlib import pyplot as plt
 from matplotlib.figure import Figure
 
-from memernaex.plot.util import Var, get_color, get_marker, get_subplot_grid, set_up_figure
+from memernaex.plot.util import Var, get_color, get_marker, get_subplot_grid, set_up_figure_2d
 
 
 def plot_mean_quantity(
@@ -41,7 +41,7 @@ def plot_mean_quantity(
                 agg_df[x.id], agg_df["low"], agg_df["high"], alpha=0.2, color=get_color(group_name)
             )
 
-    set_up_figure(f, varz=(x, ys[0]))
+    set_up_figure_2d(f, varz=(x, ys[0]))
     return f
 
 
@@ -89,5 +89,5 @@ def plot_mean_log_quantity(
             **get_marker(group_name),
         )
 
-    set_up_figure(f, varz=(x, y))
+    set_up_figure_2d(f, varz=(x, y))
     return f

@@ -110,7 +110,8 @@ class SuboptPerfPlotter:
             name, result = fitter.fit()
             print(f"Best model: {name}")
             print(result.fit_report())
-            result.plot()
+            f = fitter.plot(name)
+            f.show()
             plt.show(block=True)
             break
 

@@ -86,7 +86,7 @@ def save_figure(f: Figure, path: Path) -> None:
     plt.close(f)
 
 
-def set_up_axis(ax: Axes, varz: tuple[Var, Var], legend: bool = True) -> None:
+def set_up_axis_2d(ax: Axes, varz: tuple[Var, Var], legend: bool = True) -> None:
     if legend:
         ax.legend(loc="best", framealpha=0.5, fontsize="medium")
     ax.set_xlabel(varz[0].name)
@@ -97,7 +97,18 @@ def set_up_axis(ax: Axes, varz: tuple[Var, Var], legend: bool = True) -> None:
         ax.yaxis.set_major_formatter(varz[1].formatter)
 
 
-def set_up_figure(f: Figure, varz: tuple[Var, Var], legend: bool = True) -> None:
+def set_up_figure_2d(f: Figure, varz: tuple[Var, Var], legend: bool = True) -> None:
     f.suptitle(f"{varz[0]} vs {varz[1]}", y=1.00)
     for ax in f.get_axes():
-        set_up_axis(ax, varz, legend)
+        set_up_axis_2d(ax, varz, legend)
+
+def set_up_axis_3d(ax: Axes, varz: tuple[Var, Var, Var], legend: bool = True) -> None:
+    set_up_axis_2d(ax, varz[:2], legend)
+    ax.set_zlabel(varz[2].name)
+    if varz[2].formatter:
+        ax.zaxis.set_major_formatter(varz[2].formatter)
+
+def set_up_figure_3d(f: Figure, varz: tuple[Var, Var, Var], legend: bool = True) -> None:
+    f.suptitle(f"{varz[0]} vs {varz[1]} vs {varz[2]}", y=1.00)
+    for ax in f.get_axes():
+        set_up_axis_3d(ax, varz, legend)

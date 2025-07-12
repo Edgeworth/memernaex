@@ -6,8 +6,10 @@ import numpy.typing as npt
 import polars as pl
 from matplotlib import pyplot as plt
 from matplotlib.figure import Figure
+from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
 
-from memernaex.plot.util import Var, set_up_figure
+from memernaex.plot.util import Var, set_up_figure_2d, set_up_figure_3d
 
 
 def _model_constant(x: tuple[npt.NDArray, ...], b: float) -> Any:
@@ -82,6 +84,7 @@ class ComplexityFitter:
     df: pl.DataFrame
     xs: tuple[Var, ...]
     y: Var
+    results: dict[str, lmfit.model.ModelResult]
 
     def __init__(self, *, df: pl.DataFrame, xs: tuple[Var, ...] | Var, y: Var) -> None:
         self.df = df
@@ -90,8 +93,9 @@ class ComplexityFitter:
         elif isinstance(xs, tuple) and len(xs) == 2:
             self.xs = xs
         else:
-            raise ValueError("xs must be a string or a tuple of two strings.")
+            raise ValueError("Only 1D and 2D models are supported.")
         self.y = y
+        self.results = {}
 
     @staticmethod
     def _best_model(
@@ -118,28 +122,62 @@ class ComplexityFitter:
             results[name] = model.fit(y_data, params, x=x_data)
         return results
 
-    def _plot2d(self) -> Figure:
-        f, ax = plt.subplots(1)
+    def _plot2d(self, result: lmfit.model.ModelResult) -> Figure:
+        x0_data = self.df[self.xs[0].id]
+        x1_data = self.df[self.xs[1].id]
+        y_data = self.df[self.y.id]
 
+        f = plt.figure()
+        ax = f.add_subplot(111, projection="3d")
+
+        x0_min, x0_max = x0_data.min(), x0_data.max()
+        x1_min, x1_max = x1_data.min(), x1_data.max()
+        x0_grid, x1_grid = np.meshgrid(
+            np.linspace(x0_min, x0_max, 50), np.linspace(x1_min, x1_max, 50)
+        )
+
+        fit_y = result.model.eval(result.params, x=(x0_grid.ravel(), x1_grid.ravel()))
+        fit_y = fit_y.reshape(x0_grid.shape)
+
+        ax.scatter(x0_data, x1_data, y_data, color="red", label="Data")
+        ax.plot_surface(x0_grid, x1_grid, fit_y, color="blue", alpha=0.5, label="Fit")
+
+        legend_elements = [
+            Line2D(
+                [0], [0], marker="o", color="w", label="Data", markerfacecolor="black", markersize=5
+            ),
+            Patch(facecolor="viridis", alpha=0.7, label="Fit"),
+        ]
+        ax.legend(handles=legend_elements)
+
+        set_up_figure_3d(f, varz=(self.xs[0], self.xs[1], self.y))
         return f
 
-    def _plot1d(self) -> Figure:
+    def _plot1d(self, result: lmfit.model.ModelResult) -> Figure:
         f, ax = plt.subplots(1)
-
-        set_up_figure(f, varz=(self.xs[0], self.y))
+        result.plot()
+        set_up_figure_2d(f, varz=(self.xs[0], self.y))
         return f
 
-    def _fit1d(self, *, x: Var, y: Var) -> tuple[str, lmfit.model.ModelResult]:
-        results = self._fitnd(model_funcs=_MODELS_FUNCS_1D, xs=(x,), y=y)
-        return self._best_model(results)
+    def _fit1d(self) -> None:
+        self.results = self._fitnd(model_funcs=_MODELS_FUNCS_1D, xs=self.xs, y=self.y)
 
-    def _fit2d(self, *, xs: tuple[Var, Var], y: Var) -> tuple[str, lmfit.model.ModelResult]:
-        results = self._fitnd(model_funcs=_MODELS_FUNCS_2D, xs=xs, y=y)
-        return self._best_model(results)
+    def _fit2d(self) -> None:
+        self.results = self._fitnd(model_funcs=_MODELS_FUNCS_2D, xs=self.xs, y=self.y)
 
     def fit(self) -> tuple[str, lmfit.model.ModelResult]:
         if len(self.xs) == 1:
-            return self._fit1d(x=self.xs[0], y=self.y)
+            self._fit1d()
+        elif len(self.xs) == 2:
+            self._fit2d()
+        else:
+            raise ValueError("Only 1D and 2D models are supported.")
+        return self._best_model(self.results)
+
+    def plot(self, model_name: str) -> Figure:
+        model = self.results[model_name]
+        if len(self.xs) == 1:
+            return self._plot1d(model)
         if len(self.xs) == 2:
-            return self._fit2d(xs=self.xs, y=self.y)
-        raise ValueError("xs must be a string or a tuple of two strings.")
+            return self._plot2d(model)
+        raise ValueError("Only 1D and 2D models are supported.")
