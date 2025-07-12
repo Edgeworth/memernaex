@@ -11,19 +11,20 @@ from memernaex.plot.util import Var, save_figure, set_style
 
 
 class FoldAccuracyPlotter:
-    VAR_NAME = Var(id="name", name="Name")
-    VAR_FAMILY = Var(id="family", name="Family")
-    VAR_SENSITIVITY = Var(id="sensitivity", name="Sensitivity")
-    VAR_PPV = Var(id="ppv", name="Positive predictive value")
-    VAR_F1 = Var(id="f1", name="F1 score")
-    VAR_LENGTH = Var(id="length", name="Length (nuc)")
-    VAR_REAL_SEC = Var(id="real_sec", name="Wall time (s)")
+    VAR_NAME = Var(id="name", name="Name", dtype=pl.String)
+    VAR_FAMILY = Var(id="family", name="Family", dtype=pl.String)
+    VAR_SENSITIVITY = Var(id="sensitivity", name="Sensitivity", dtype=pl.Float64)
+    VAR_PPV = Var(id="ppv", name="Positive predictive value", dtype=pl.Float64)
+    VAR_F1 = Var(id="f1", name="F1 score", dtype=pl.Float64)
+    VAR_LENGTH = Var(id="length", name="Length (nuc)", dtype=pl.Int64)
+    VAR_REAL_SEC = Var(id="real_sec", name="Wall time (s)", dtype=pl.Float64)
     VAR_MAXRSS_BYTES = Var(
         id="maxrss_bytes",
         name="Maximum RSS (B)",
+        dtype=pl.Int64,
         formatter=ticker.FuncFormatter(lambda x, _: human_size(x, False)),
     )
-    VAR_PROGRAM = Var(id="program", name="Program")
+    VAR_PROGRAM = Var(id="program", name="Program", dtype=pl.String)
     df: pl.DataFrame
     output_dir: Path
 

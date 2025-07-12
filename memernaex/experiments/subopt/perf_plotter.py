@@ -13,35 +13,36 @@ from memernaex.plot.util import Var, save_figure, set_style
 
 
 class SuboptPerfPlotter:
-    VAR_PACKAGE_NAME = Var(id="package_name", name="Package Name")
-    VAR_CTD = Var(id="ctd", name="CTD")
-    VAR_LONELY_PAIRS = Var(id="lonely_pairs", name="Lonely Pairs")
-    VAR_ENERGY_MODEL = Var(id="energy_model", name="Energy Model")
-    VAR_BACKEND = Var(id="backend", name="Backend")
-    VAR_SORTED_STRUCS = Var(id="sorted_strucs", name="Sorted Structures")
-    VAR_DELTA = Var(id="delta", name="Delta")
-    VAR_STRUCS = Var(id="strucs", name="Structures")
-    VAR_TIME_SECS = Var(id="time_secs", name="Time (s)")
-    VAR_COUNT_ONLY = Var(id="count_only", name="Count Only")
-    VAR_ALGORITHM = Var(id="algorithm", name="Algorithm")
-    VAR_DATASET = Var(id="dataset", name="Dataset")
-    VAR_RNA_NAME = Var(id="rna_name", name="RNA Name")
-    VAR_RNA_LENGTH = Var(id="rna_length", name="Length (nuc)")
-    VAR_RUN_ID = Var(id="run_id", name="Run Index")
-    VAR_OUTPUT_STRUCS = Var(id="output_strucs", name="Output Structures")
+    VAR_PACKAGE_NAME = Var(id="package_name", name="Package Name", dtype=pl.String)
+    VAR_CTD = Var(id="ctd", name="CTD", dtype=pl.String)
+    VAR_LONELY_PAIRS = Var(id="lonely_pairs", name="Lonely Pairs", dtype=pl.String)
+    VAR_ENERGY_MODEL = Var(id="energy_model", name="Energy Model", dtype=pl.String)
+    VAR_BACKEND = Var(id="backend", name="Backend", dtype=pl.String)
+    VAR_SORTED_STRUCS = Var(id="sorted_strucs", name="Sorted Structures", dtype=pl.Boolean)
+    VAR_DELTA = Var(id="delta", name="Delta", dtype=pl.Float64)
+    VAR_STRUCS = Var(id="strucs", name="Structures", dtype=pl.Int64)
+    VAR_TIME_SECS = Var(id="time_secs", name="Time (s)", dtype=pl.Float64)
+    VAR_COUNT_ONLY = Var(id="count_only", name="Count Only", dtype=pl.Boolean)
+    VAR_ALGORITHM = Var(id="algorithm", name="Algorithm", dtype=pl.String)
+    VAR_DATASET = Var(id="dataset", name="Dataset", dtype=pl.String)
+    VAR_RNA_NAME = Var(id="rna_name", name="RNA Name", dtype=pl.String)
+    VAR_RNA_LENGTH = Var(id="rna_length", name="Length (nuc)", dtype=pl.Int64)
+    VAR_RUN_ID = Var(id="run_id", name="Run Index", dtype=pl.Int64)
+    VAR_OUTPUT_STRUCS = Var(id="output_strucs", name="Output Structures", dtype=pl.Int64)
     VAR_MAXRSS_BYTES = Var(
         id="maxrss_bytes",
         name="Maximum RSS (B)",
+        dtype=pl.Int64,
         formatter=ticker.FuncFormatter(lambda x, _: human_size(x, False)),
     )
-    VAR_USER_SEC = Var(id="user_sec", name="User time (s)")
-    VAR_SYS_SEC = Var(id="sys_sec", name="Sys time (s)")
-    VAR_REAL_SEC = Var(id="real_sec", name="Wall time (s)")
-    VAR_FAILED = Var(id="failed", name="Failed")
+    VAR_USER_SEC = Var(id="user_sec", name="User time (s)", dtype=pl.Float64)
+    VAR_SYS_SEC = Var(id="sys_sec", name="Sys time (s)", dtype=pl.Float64)
+    VAR_REAL_SEC = Var(id="real_sec", name="Wall time (s)", dtype=pl.Float64)
+    VAR_FAILED = Var(id="failed", name="Failed", dtype=pl.Boolean)
     # Derived vars:
-    VAR_STRUCS_PER_SEC = Var(id="strucs_per_sec", name="Structures per second")
-    VAR_BASES_PER_BYTE = Var(id="bases_per_byte", name="Bases per byte")
-    VAR_PROGRAM = Var(id="program", name="Program")
+    VAR_STRUCS_PER_SEC = Var(id="strucs_per_sec", name="Structures per second", dtype=pl.Float64)
+    VAR_BASES_PER_BYTE = Var(id="bases_per_byte", name="Bases per byte", dtype=pl.Float64)
+    VAR_PROGRAM = Var(id="program", name="Program", dtype=pl.String)
 
     GROUP_VARS: ClassVar[list[str]] = [
         "count_only",
@@ -101,7 +102,6 @@ class SuboptPerfPlotter:
         for group, group_df in self.df.group_by(self.PACKAGE_VARS):
             # Split into two dfs - ones with "delta" non-empty and ones with "strucs" non-empty.
             df = group_df.filter(pl.col("delta").str.len_chars() > 0)
-            print(df)
             group_name = "_".join(str(x) for x in group)
             print(group_name)
             fitter = ComplexityFitter(

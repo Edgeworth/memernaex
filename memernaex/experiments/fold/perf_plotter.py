@@ -10,17 +10,18 @@ from memernaex.plot.util import Var, save_figure, set_style
 
 
 class FoldPerfPlotter:
-    VAR_NAME = Var(id="name", name="Name")
-    VAR_LENGTH = Var(id="length", name="Length (nuc)")
-    VAR_REAL_SEC = Var(id="real_sec", name="Wall time (s)")
-    VAR_USER_SEC = Var(id="user_sec", name="User time (s)")
-    VAR_SYS_SEC = Var(id="sys_sec", name="Sys time (s)")
+    VAR_NAME = Var(id="name", name="Name", dtype=pl.String)
+    VAR_LENGTH = Var(id="length", name="Length (nuc)", dtype=pl.Int64)
+    VAR_REAL_SEC = Var(id="real_sec", name="Wall time (s)", dtype=pl.Float64)
+    VAR_USER_SEC = Var(id="user_sec", name="User time (s)", dtype=pl.Float64)
+    VAR_SYS_SEC = Var(id="sys_sec", name="Sys time (s)", dtype=pl.Float64)
     VAR_MAXRSS_BYTES = Var(
         id="maxrss_bytes",
         name="Maximum RSS (B)",
+        dtype=pl.Int64,
         formatter=ticker.FuncFormatter(lambda x, _: human_size(x, False)),
     )
-    VAR_PROGRAM = Var(id="program", name="Program")
+    VAR_PROGRAM = Var(id="program", name="Program", dtype=pl.String)
     df: pl.DataFrame
     output_dir: Path
 

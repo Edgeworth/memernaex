@@ -8,6 +8,7 @@ from matplotlib import pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
+from mpl_toolkits.mplot3d import Axes3D
 
 from memernaex.plot.util import Var, set_up_figure_2d, set_up_figure_3d
 
@@ -123,15 +124,16 @@ class ComplexityFitter:
         return results
 
     def _plot2d(self, result: lmfit.model.ModelResult) -> Figure:
-        x0_data = self.df[self.xs[0].id]
-        x1_data = self.df[self.xs[1].id]
-        y_data = self.df[self.y.id]
+        x0_data = self.df[self.xs[0].id].to_numpy()
+        x1_data = self.df[self.xs[1].id].to_numpy()
+        y_data = self.df[self.y.id].to_numpy()
+        print(list(x0_data))
 
         f = plt.figure()
-        ax = f.add_subplot(111, projection="3d")
+        ax: Axes3D = f.add_subplot(111, projection="3d")
 
-        x0_min, x0_max = x0_data.min(), x0_data.max()
-        x1_min, x1_max = x1_data.min(), x1_data.max()
+        x0_min, x0_max = float(x0_data.min()), float(x0_data.max())
+        x1_min, x1_max = float(x1_data.min()), float(x1_data.max())
         x0_grid, x1_grid = np.meshgrid(
             np.linspace(x0_min, x0_max, 50), np.linspace(x1_min, x1_max, 50)
         )
@@ -141,12 +143,13 @@ class ComplexityFitter:
 
         ax.scatter(x0_data, x1_data, y_data, color="red", label="Data")
         ax.plot_surface(x0_grid, x1_grid, fit_y, color="blue", alpha=0.5, label="Fit")
+        ax.set_box_aspect((np.ptp(x0_data), np.ptp(x1_data), np.ptp(y_data)))
 
         legend_elements = [
             Line2D(
                 [0], [0], marker="o", color="w", label="Data", markerfacecolor="black", markersize=5
             ),
-            Patch(facecolor="viridis", alpha=0.7, label="Fit"),
+            Patch(facecolor="blue", alpha=0.7, label="Fit"),
         ]
         ax.legend(handles=legend_elements)
 

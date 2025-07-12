@@ -3,12 +3,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import polars as pl
 import seaborn as sns
 from bidict import bidict
 from matplotlib import pyplot as plt
 from matplotlib import ticker
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
+from mpl_toolkits.mplot3d import Axes3D
 from rnapy.util.util import stable_hash
 
 
@@ -16,6 +18,7 @@ from rnapy.util.util import stable_hash
 class Var:
     id: str
     name: str
+    dtype: type[pl.DataType]
     formatter: ticker.FuncFormatter | None = None
 
 
@@ -50,28 +53,34 @@ def get_subplot_grid(
     return f, axes
 
 
+class _ColorManager:
+    def __init__(self) -> None:
+        self.color_map: bidict = bidict()
+
+    def get_color(self, name: str, palette: Sequence[Any] | None = None) -> Any:
+        if name in self.color_map:
+            return self.color_map[name]
+
+        if palette is None:
+            palette = sns.color_palette("husl", n_colors=12)
+
+        start_idx = stable_hash(name) % len(palette)
+        idx = start_idx
+        while palette[idx] in self.color_map.inverse:
+            idx = (idx + 1) % len(palette)
+            if idx == start_idx:
+                raise ValueError(f"No free color available in the palette: {len(palette)}")
+
+        self.color_map[name] = palette[idx]
+
+        return self.color_map[name]
+
+
+_color_manager = _ColorManager()
+
+
 def get_color(name: str, palette: Sequence[Any] | None = None) -> Any:
-    color_map: bidict = getattr(get_color, "color_map", bidict())
-    get_color.color_map = color_map  # type: ignore[attr-defined]
-    print(name, color_map.keys())
-    if name in color_map:
-        return color_map[name]
-
-    if palette is None:
-        palette = sns.color_palette("husl", n_colors=12)
-        print(len(set(palette)))
-
-    start_idx = stable_hash(name) % len(palette)
-    idx = start_idx
-    while palette[idx] in color_map.inverse:
-        idx = (idx + 1) % len(palette)
-        print(idx, start_idx)
-        if idx == start_idx:
-            raise ValueError(f"No free color available in the palette: {len(palette)}")
-
-    color_map[name] = palette[idx]
-
-    return color_map[name]
+    return _color_manager.get_color(name, palette)
 
 
 def get_marker(name: int | str) -> dict[str, Any]:
@@ -102,13 +111,15 @@ def set_up_figure_2d(f: Figure, varz: tuple[Var, Var], legend: bool = True) -> N
     for ax in f.get_axes():
         set_up_axis_2d(ax, varz, legend)
 
-def set_up_axis_3d(ax: Axes, varz: tuple[Var, Var, Var], legend: bool = True) -> None:
+
+def set_up_axis_3d(ax: Axes3D, varz: tuple[Var, Var, Var], legend: bool = True) -> None:
     set_up_axis_2d(ax, varz[:2], legend)
     ax.set_zlabel(varz[2].name)
     if varz[2].formatter:
         ax.zaxis.set_major_formatter(varz[2].formatter)
 
+
 def set_up_figure_3d(f: Figure, varz: tuple[Var, Var, Var], legend: bool = True) -> None:
-    f.suptitle(f"{varz[0]} vs {varz[1]} vs {varz[2]}", y=1.00)
+    f.suptitle(f"{varz[0].name} vs {varz[1].name} vs {varz[2].name}", y=1.00)
     for ax in f.get_axes():
         set_up_axis_3d(ax, varz, legend)
