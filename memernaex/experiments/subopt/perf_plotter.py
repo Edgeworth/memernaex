@@ -8,7 +8,7 @@ from matplotlib import ticker
 from rnapy.util.format import human_size
 
 from memernaex.analysis.complexity import ComplexityFitter
-from memernaex.analysis.data import Var
+from memernaex.analysis.data import Var, read_var_data
 from memernaex.plot.plots import plot_mean_quantity
 from memernaex.plot.util import save_figure, set_style
 
@@ -19,16 +19,16 @@ class SuboptPerfPlotter:
     VAR_LONELY_PAIRS = Var(id="lonely_pairs", name="Lonely Pairs", dtype=pl.String)
     VAR_ENERGY_MODEL = Var(id="energy_model", name="Energy Model", dtype=pl.String)
     VAR_BACKEND = Var(id="backend", name="Backend", dtype=pl.String)
-    VAR_SORTED_STRUCS = Var(id="sorted_strucs", name="Sorted Structures", dtype=pl.Boolean)
-    VAR_DELTA = Var(id="delta", name="Delta", dtype=pl.Float64)
-    VAR_STRUCS = Var(id="strucs", name="Structures", dtype=pl.Int64)
-    VAR_TIME_SECS = Var(id="time_secs", name="Time (s)", dtype=pl.Float64)
-    VAR_COUNT_ONLY = Var(id="count_only", name="Count Only", dtype=pl.Boolean)
+    VAR_SORTED_STRUCS = Var(id="sorted_strucs", name="Sorted Structures", dtype=pl.String)
+    VAR_DELTA = Var(id="delta", name="Delta", dtype=pl.String)
+    VAR_STRUCS = Var(id="strucs", name="Structures", dtype=pl.String)
+    VAR_TIME_SECS = Var(id="time_secs", name="Time (s)", dtype=pl.String)
+    VAR_COUNT_ONLY = Var(id="count_only", name="Count Only", dtype=pl.String)
     VAR_ALGORITHM = Var(id="algorithm", name="Algorithm", dtype=pl.String)
     VAR_DATASET = Var(id="dataset", name="Dataset", dtype=pl.String)
     VAR_RNA_NAME = Var(id="rna_name", name="RNA Name", dtype=pl.String)
     VAR_RNA_LENGTH = Var(id="rna_length", name="Length (nuc)", dtype=pl.Int64)
-    VAR_RUN_ID = Var(id="run_id", name="Run Index", dtype=pl.Int64)
+    VAR_RUN_IDX = Var(id="run_idx", name="Run Index", dtype=pl.Int64)
     VAR_OUTPUT_STRUCS = Var(id="output_strucs", name="Output Structures", dtype=pl.Int64)
     VAR_MAXRSS_BYTES = Var(
         id="maxrss_bytes",
@@ -41,9 +41,13 @@ class SuboptPerfPlotter:
     VAR_REAL_SEC = Var(id="real_sec", name="Wall time (s)", dtype=pl.Float64)
     VAR_FAILED = Var(id="failed", name="Failed", dtype=pl.Boolean)
     # Derived vars:
-    VAR_STRUCS_PER_SEC = Var(id="strucs_per_sec", name="Structures per second", dtype=pl.Float64)
-    VAR_BASES_PER_BYTE = Var(id="bases_per_byte", name="Bases per byte", dtype=pl.Float64)
-    VAR_PROGRAM = Var(id="program", name="Program", dtype=pl.String)
+    VAR_STRUCS_PER_SEC = Var(
+        id="strucs_per_sec", name="Structures per second", dtype=pl.Float64, derived=True
+    )
+    VAR_BASES_PER_BYTE = Var(
+        id="bases_per_byte", name="Bases per byte", dtype=pl.Float64, derived=True
+    )
+    VAR_PROGRAM = Var(id="program", name="Program", dtype=pl.String, derived=True)
 
     GROUP_VARS: ClassVar[list[str]] = [
         "count_only",
@@ -70,7 +74,7 @@ class SuboptPerfPlotter:
 
     def __init__(self, input_path: Path, output_dir: Path) -> None:
         self.output_dir = output_dir
-        self.df = pl.read_ndjson(input_path)
+        self.df = read_var_data(self.__class__, input_path)
 
         # Add column for program identifier.
         self.df = self.df.with_columns(

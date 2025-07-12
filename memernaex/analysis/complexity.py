@@ -125,10 +125,9 @@ class ComplexityFitter:
         return results
 
     def _plot2d(self, result: lmfit.model.ModelResult) -> Figure:
-        x0_data = self.df[self.xs[0].id].to_numpy()
-        x1_data = self.df[self.xs[1].id].to_numpy()
-        y_data = self.df[self.y.id].to_numpy()
-        print(list(x0_data))
+        x0_data = self.df[self.xs[0].id].cast(pl.Float64).to_numpy()
+        x1_data = self.df[self.xs[1].id].cast(pl.Float64).to_numpy()
+        y_data = self.df[self.y.id].cast(pl.Float64).to_numpy()
 
         f = plt.figure()
         ax: Axes3D = f.add_subplot(111, projection="3d")
@@ -144,7 +143,7 @@ class ComplexityFitter:
 
         ax.scatter(x0_data, x1_data, y_data, color="red", label="Data")
         ax.plot_surface(x0_grid, x1_grid, fit_y, color="blue", alpha=0.5, label="Fit")
-        ax.set_box_aspect((np.ptp(x0_data), np.ptp(x1_data), np.ptp(y_data)))
+        # ax.set_box_aspect((np.ptp(x0_data), np.ptp(x1_data), np.ptp(y_data)))
 
         legend_elements = [
             Line2D(

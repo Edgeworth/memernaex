@@ -6,7 +6,7 @@ from matplotlib import ticker
 from rnapy.util.format import human_size
 from scipy.stats import ttest_rel
 
-from memernaex.analysis.data import Var
+from memernaex.analysis.data import Var, read_var_data
 from memernaex.plot.plots import plot_mean_quantity
 from memernaex.plot.util import save_figure, set_style
 
@@ -30,7 +30,7 @@ class FoldAccuracyPlotter:
     output_dir: Path
 
     def __init__(self, input_path: Path, output_dir: Path) -> None:
-        self.df = pl.read_ndjson(input_path)
+        self.df = read_var_data(self.__class__, input_path)
         self.output_dir = output_dir
         set_style()
 
