@@ -19,19 +19,19 @@ bidict = ">=0.23.1"
 click = ">=8.2.1"
 click-params = ">=0.5.0"
 click_log = ">=0.4.0"
-cloup = ">=3.0.7"
-lmfit = "^1.3.3"
-matplotlib = ">=3.10.3"
-polars = ">=1.31.0"
-pyarrow = "^20.0.0"
+cloup = ">=3.0.8"
+lmfit = "^1.3.4"
+matplotlib = ">=3.10.5"
+polars = ">=1.32.2"
+pyarrow = "^21.0.0"
 rnapy = {git = "https://github.com/Edgeworth/memerna.git", rev = "main"}
-scipy = ">=1.16.0"
+scipy = ">=1.16.1"
 seaborn = ">=0.13.2"
 statsmodels = ">=0.14.5"
 viennarna = ">=2.7.0"
 
 [tool.poetry.group.dev.dependencies]
-mypy = ">=1.16.1"
+mypy = ">=1.17.1"
 poetry-plugin-up = ">=0.9.0"
 
 [tool.mypy]

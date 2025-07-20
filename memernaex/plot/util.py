@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import seaborn as sns
 from bidict import bidict
@@ -113,4 +113,4 @@ def set_up_axis_3d(ax: Axes3D, varz: tuple[Var, Var, Var], legend: bool = True) 
 def set_up_figure_3d(f: Figure, varz: tuple[Var, Var, Var], legend: bool = True) -> None:
     f.suptitle(f"{varz[0].name} vs {varz[1].name} vs {varz[2].name}", y=1.00)
     for ax in f.get_axes():
-        set_up_axis_3d(ax, varz, legend)
+        set_up_axis_3d(cast(Axes3D, ax), varz, legend)

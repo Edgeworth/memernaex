@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 import lmfit
 import numpy as np
@@ -14,35 +14,35 @@ from memernaex.analysis.data import Var
 from memernaex.plot.util import set_up_figure_2d, set_up_figure_3d
 
 
-def _model_constant(x: tuple[npt.NDArray, ...], b: float) -> Any:
+def _model_constant(x: tuple[npt.NDArray[np.float64], ...], b: float) -> Any:
     return b * np.ones_like(x[0].astype(float))
 
 
-def _model_log_n(x: tuple[npt.NDArray, ...], a: float, b: float) -> Any:
+def _model_log_n(x: tuple[npt.NDArray[np.float64], ...], a: float, b: float) -> Any:
     return a * np.log(x[0]) + b
 
 
-def _model_n_log_n(x: tuple[npt.NDArray, ...], a: float, b: float) -> Any:
+def _model_n_log_n(x: tuple[npt.NDArray[np.float64], ...], a: float, b: float) -> Any:
     return a * x[0] * np.log(x[0]) + b
 
 
-def _model_linear(x: tuple[npt.NDArray, ...], a: float, b: float) -> Any:
+def _model_linear(x: tuple[npt.NDArray[np.float64], ...], a: float, b: float) -> Any:
     return a * x[0] + b
 
 
-def _model_n_squared(x: tuple[npt.NDArray, ...], a: float, b: float) -> Any:
+def _model_n_squared(x: tuple[npt.NDArray[np.float64], ...], a: float, b: float) -> Any:
     return a * x[0] ** 2 + b
 
 
-def _model_n_cubed(x: tuple[npt.NDArray, ...], a: float, b: float) -> Any:
+def _model_n_cubed(x: tuple[npt.NDArray[np.float64], ...], a: float, b: float) -> Any:
     return a * x[0] ** 3 + b
 
 
-def _model_n_squared_log_n(x: tuple[npt.NDArray, ...], a: float, b: float) -> Any:
+def _model_n_squared_log_n(x: tuple[npt.NDArray[np.float64], ...], a: float, b: float) -> Any:
     return a * (x[0] ** 2) * np.log(x[0]) + b
 
 
-def _model_polynomial(x: tuple[npt.NDArray, ...], a: float, b: float, c: float) -> Any:
+def _model_polynomial(x: tuple[npt.NDArray[np.float64], ...], a: float, b: float, c: float) -> Any:
     return a * x[0] ** c + b
 
 
@@ -58,19 +58,19 @@ _MODELS_FUNCS_1D = {
 }
 
 
-def _model_n_plus_m(x: tuple[npt.NDArray, ...], a: float, b: float) -> Any:
+def _model_n_plus_m(x: tuple[npt.NDArray[np.float64], ...], a: float, b: float) -> Any:
     return a * (x[0] + x[1]) + b
 
 
-def _model_n_times_m(x: tuple[npt.NDArray, ...], a: float, b: float) -> Any:
+def _model_n_times_m(x: tuple[npt.NDArray[np.float64], ...], a: float, b: float) -> Any:
     return a * x[0] * x[1] + b
 
 
-def _model_n_squared_times_m(x: tuple[npt.NDArray, ...], a: float, b: float) -> Any:
+def _model_n_squared_times_m(x: tuple[npt.NDArray[np.float64], ...], a: float, b: float) -> Any:
     return a * (x[0] ** 2) * x[1] + b
 
 
-def _model_n_times_m_squared(x: tuple[npt.NDArray, ...], a: float, b: float) -> Any:
+def _model_n_times_m_squared(x: tuple[npt.NDArray[np.float64], ...], a: float, b: float) -> Any:
     return a * x[0] * (x[1] ** 2) + b
 
 
@@ -130,7 +130,7 @@ class ComplexityFitter:
         y_data = self.df[self.y.id].cast(pl.Float64).to_numpy()
 
         f = plt.figure()
-        ax: Axes3D = f.add_subplot(111, projection="3d")
+        ax: Axes3D = cast(Axes3D, f.add_subplot(111, projection="3d"))
 
         x0_min, x0_max = float(x0_data.min()), float(x0_data.max())
         x1_min, x1_max = float(x1_data.min()), float(x1_data.max())
@@ -138,12 +138,14 @@ class ComplexityFitter:
             np.linspace(x0_min, x0_max, 50), np.linspace(x1_min, x1_max, 50)
         )
 
-        fit_y = result.model.eval(result.params, x=(x0_grid.ravel(), x1_grid.ravel()))
+        fit_y = cast(
+            npt.NDArray[np.float64],
+            result.model.eval(result.params, x=(x0_grid.ravel(), x1_grid.ravel())),
+        )
         fit_y = fit_y.reshape(x0_grid.shape)
 
         ax.scatter(x0_data, x1_data, y_data, color="red", label="Data")
         ax.plot_surface(x0_grid, x1_grid, fit_y, color="blue", alpha=0.5, label="Fit")
-        # ax.set_box_aspect((np.ptp(x0_data), np.ptp(x1_data), np.ptp(y_data)))
 
         legend_elements = [
             Line2D(
