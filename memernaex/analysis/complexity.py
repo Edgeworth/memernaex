@@ -14,36 +14,38 @@ from memernaex.analysis.data import Var
 from memernaex.plot.util import set_up_figure_2d, set_up_figure_3d
 
 
-def _model_constant(x: tuple[npt.NDArray[np.float64], ...], b: float) -> Any:
-    return b * np.ones_like(x[0].astype(float))
+def _model_constant(x: tuple[npt.NDArray[np.float64], ...], b0: float) -> Any:
+    return b0 * np.ones_like(x[0].astype(float))
 
 
-def _model_log_n(x: tuple[npt.NDArray[np.float64], ...], a: float, b: float) -> Any:
-    return a * np.log(x[0]) + b
+def _model_log_n(x: tuple[npt.NDArray[np.float64], ...], a0: float, b0: float) -> Any:
+    return a0 * np.log(x[0]) + b0
 
 
-def _model_n_log_n(x: tuple[npt.NDArray[np.float64], ...], a: float, b: float) -> Any:
-    return a * x[0] * np.log(x[0]) + b
+def _model_n_log_n(x: tuple[npt.NDArray[np.float64], ...], a0: float, b0: float) -> Any:
+    return a0 * x[0] * np.log(x[0]) + b0
 
 
-def _model_linear(x: tuple[npt.NDArray[np.float64], ...], a: float, b: float) -> Any:
-    return a * x[0] + b
+def _model_linear(x: tuple[npt.NDArray[np.float64], ...], a0: float, b0: float) -> Any:
+    return a0 * x[0] + b0
 
 
-def _model_n_squared(x: tuple[npt.NDArray[np.float64], ...], a: float, b: float) -> Any:
-    return a * x[0] ** 2 + b
+def _model_n_squared(x: tuple[npt.NDArray[np.float64], ...], a0: float, b0: float) -> Any:
+    return a0 * x[0] ** 2 + b0
 
 
-def _model_n_cubed(x: tuple[npt.NDArray[np.float64], ...], a: float, b: float) -> Any:
-    return a * x[0] ** 3 + b
+def _model_n_cubed(x: tuple[npt.NDArray[np.float64], ...], a0: float, b0: float) -> Any:
+    return a0 * x[0] ** 3 + b0
 
 
-def _model_n_squared_log_n(x: tuple[npt.NDArray[np.float64], ...], a: float, b: float) -> Any:
-    return a * (x[0] ** 2) * np.log(x[0]) + b
+def _model_n_squared_log_n(x: tuple[npt.NDArray[np.float64], ...], a0: float, b0: float) -> Any:
+    return a0 * (x[0] ** 2) * np.log(x[0]) + b0
 
 
-def _model_polynomial(x: tuple[npt.NDArray[np.float64], ...], a: float, b: float, c: float) -> Any:
-    return a * x[0] ** c + b
+def _model_polynomial(
+    x: tuple[npt.NDArray[np.float64], ...], a0: float, b0: float, c: float
+) -> Any:
+    return a0 * x[0] ** c + b0
 
 
 _MODELS_FUNCS_1D = {
@@ -58,20 +60,26 @@ _MODELS_FUNCS_1D = {
 }
 
 
-def _model_n_plus_m(x: tuple[npt.NDArray[np.float64], ...], a: float, b: float) -> Any:
-    return a * (x[0] + x[1]) + b
+def _model_n_plus_m(x: tuple[npt.NDArray[np.float64], ...], a0: float, a1: float, b0: float) -> Any:
+    return a0 * x[0] + a1 * x[1] + b0
 
 
-def _model_n_times_m(x: tuple[npt.NDArray[np.float64], ...], a: float, b: float) -> Any:
-    return a * x[0] * x[1] + b
+def _model_n_times_m(x: tuple[npt.NDArray[np.float64], ...], a0: float, b0: float) -> Any:
+    return a0 * x[0] * x[1] + b0
 
 
-def _model_n_squared_times_m(x: tuple[npt.NDArray[np.float64], ...], a: float, b: float) -> Any:
-    return a * (x[0] ** 2) * x[1] + b
+def _model_n_squared_times_m(x: tuple[npt.NDArray[np.float64], ...], a0: float, b0: float) -> Any:
+    return a0 * (x[0] ** 2) * x[1] + b0
 
 
-def _model_n_times_m_squared(x: tuple[npt.NDArray[np.float64], ...], a: float, b: float) -> Any:
-    return a * x[0] * (x[1] ** 2) + b
+def _model_n_times_m_squared(x: tuple[npt.NDArray[np.float64], ...], a0: float, b0: float) -> Any:
+    return a0 * x[0] * (x[1] ** 2) + b0
+
+
+def _model_k_n_times_m(
+    x: tuple[npt.NDArray[np.float64], ...], k: float, a0: float, b0: float
+) -> Any:
+    return a0 * (k ** x[0]) * x[1] + b0
 
 
 _MODELS_FUNCS_2D = {
@@ -79,6 +87,7 @@ _MODELS_FUNCS_2D = {
     "n*m": _model_n_times_m,
     "n^2*m": _model_n_squared_times_m,
     "n*m^2": _model_n_times_m_squared,
+    "k^n*m": _model_k_n_times_m,
 }
 
 
@@ -117,11 +126,19 @@ class ComplexityFitter:
             params = model.make_params()
 
             for param_name in params:
-                params[param_name].set(value=1.0)
-                if param_name == "a":
-                    params[param_name].set(min=0.0)
+                if param_name.startswith("a"):
+                    params[param_name].set(value=1.0, min=0.0)
+                elif param_name.startswith("b"):
+                    params[param_name].set(value=0.0)
+                elif param_name.startswith("k"):
+                    params[param_name].set(value=1.0, min=0.0)
+                else:
+                    params[param_name].set(value=1.0)
 
             results[name] = model.fit(y_data, params, x=x_data)
+            print("Fitted model:", name)
+            print(results[name].fit_report())
+            print()
         return results
 
     def _plot2d(self, result: lmfit.model.ModelResult) -> Figure:
