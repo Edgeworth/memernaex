@@ -87,6 +87,9 @@ class SuboptPerfPlotter:
         # Remove any rows with failed true.
         self.df = self.df.filter(~pl.col(VAR_FAILED.id))
 
+        # Remove any rows with real time less than 0.1 seconds for numeric stability.
+        self.df = self.df.filter(pl.col(VAR_REAL_SEC.id) > 0.1)
+
         # Add column for program identifier.
         self.df = self.df.with_columns(
             pl.format("{}-{}-{}-{}", *PACKAGE_VARS).alias(VAR_PACKAGE.id),
@@ -112,26 +115,39 @@ class SuboptPerfPlotter:
                 save_figure(f, self._path(f"{name}_{group_name}_{y_var.id}"))
 
     def _analyze_complexity(self) -> None:
-        # Average all dependent variables by group.
-        df = self.df.group_by(PACKAGE_VARS + GROUP_VARS).agg(pl.col(DEPENDENT_VARS).mean())
-        print(df)
+        # Average all dependent variables.
+        df = self.df.group_by(PACKAGE_VARS + GROUP_VARS + [VAR_RNA_LENGTH.id]).agg(
+            pl.col(DEPENDENT_VARS).mean()
+        )
 
-        for group, group_df in self.df.group_by(PACKAGE_VARS + [VAR_RNA_LENGTH.id]):
-            # Split into two dfs - ones with "delta" non-empty and ones with "strucs" non-empty.
-            df = group_df.filter(pl.col(VAR_DELTA.id).str.len_chars() > 0)
-            group_name = "_".join(str(x) for x in group)
-            if group_name != "memerna_d2_heuristic_True_t04_iterative_base_3000":
-                continue
-            print(group_name)
-            fitter = ComplexityFitter(df=df, xs=(VAR_DELTA, VAR_RNA_LENGTH), y=VAR_REAL_SEC)
-            name, result = fitter.fit()
-            print(f"Best model: {name}")
-            print(result.fit_report())
-            print()
-            f = fitter.plot(name)
-            f.show()
-            plt.show(block=True)
-            break
+        # Filter out rows with RNA length less than 100 to avoid noise.
+        # Just a heuristic.
+        df = df.filter(pl.col(VAR_RNA_LENGTH.id) >= 100)
+
+        # Filter out rows with no structures generated.
+        df = df.filter(pl.col(VAR_OUTPUT_STRUCS.id) > 0)
+
+        for group, group_df in df.group_by(PACKAGE_VARS):
+            for split_var in [VAR_DELTA, VAR_STRUCS]:
+                split_df = group_df.filter(pl.col(split_var.id).str.len_chars() > 0)
+                for dependent in [VAR_REAL_SEC, VAR_MAXRSS_BYTES]:
+                    group_name = (
+                        "_".join(str(x) for x in group) + f"_{split_var.id}" + f"_{dependent.id}"
+                    )
+                    print(group_name)
+                    if len(split_df) == 0:
+                        print("No data for this group.")
+                        continue
+                    fitter = ComplexityFitter(
+                        df=split_df, xs=(VAR_RNA_LENGTH, split_var), y=dependent
+                    )
+                    name, result = fitter.fit()
+                    print(f"Best model: {name}")
+                    print(result.fit_report())
+                    print()
+                    f = fitter.plot(name)
+                    f.show()
+                    plt.show(block=True)
 
     def run(self) -> None:
         # self._plot_quantity("quantity")

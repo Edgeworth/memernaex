@@ -1,3 +1,6 @@
+import logging
+import re
+from collections.abc import Callable
 from typing import Any, cast
 
 import lmfit
@@ -13,82 +16,61 @@ from mpl_toolkits.mplot3d import Axes3D
 from memernaex.analysis.data import Var
 from memernaex.plot.util import set_up_figure_2d, set_up_figure_3d
 
+log = logging.getLogger(__name__)
+
 
 def _model_constant(x: tuple[npt.NDArray[np.float64], ...], b0: float) -> Any:
     return b0 * np.ones_like(x[0].astype(float))
 
 
-def _model_log_n(x: tuple[npt.NDArray[np.float64], ...], a0: float, b0: float) -> Any:
-    return a0 * np.log(x[0]) + b0
+def _generate_model_func(expr: str, var_names: tuple[str, ...]) -> Callable[..., Any]:
+    if expr == "1":
+        return _model_constant
+
+    terms = expr.split("+")
+    idents = re.findall(r"[a-zA-Z_][a-zA-Z0-9_]*", expr)
+
+    coeffs = [f"a{i}" for i in range(len(terms))]
+    params = sorted({v for v in idents if v not in var_names and v != "log"})
+    params.extend(coeffs)
+    params.append("b0")
+
+    var_map = {name: f"x[{i}]" for i, name in enumerate(var_names)}
+    func_body_parts = []
+    for i, term in enumerate(terms):
+        term_code = term.strip()
+        for var, code in var_map.items():
+            term_code = term_code.replace(var, code)
+
+        term_code = re.sub(r"log\((.*?)\)", r"np.log(\1)", term_code)
+
+        term_code = term_code.replace("^", "**")
+        func_body_parts.append(f"{coeffs[i]} * ({term_code})")
+
+    func_body = " + ".join(func_body_parts) + " + b0"
+
+    params_with_types = [f"{p}: float" for p in params]
+    signature = (
+        "def model_func(x: tuple[npt.NDArray[np.float64], ...], "
+        f"{', '.join(params_with_types)}) -> Any: return {func_body}"
+    )
+    exec_scope = {"np": np, "npt": npt, "Any": Any}
+    exec(signature, exec_scope)  # noqa: S102
+    return cast(Callable[..., Any], exec_scope["model_func"])
 
 
-def _model_n_log_n(x: tuple[npt.NDArray[np.float64], ...], a0: float, b0: float) -> Any:
-    return a0 * x[0] * np.log(x[0]) + b0
-
-
-def _model_linear(x: tuple[npt.NDArray[np.float64], ...], a0: float, b0: float) -> Any:
-    return a0 * x[0] + b0
-
-
-def _model_n_squared(x: tuple[npt.NDArray[np.float64], ...], a0: float, b0: float) -> Any:
-    return a0 * x[0] ** 2 + b0
-
-
-def _model_n_cubed(x: tuple[npt.NDArray[np.float64], ...], a0: float, b0: float) -> Any:
-    return a0 * x[0] ** 3 + b0
-
-
-def _model_n_squared_log_n(x: tuple[npt.NDArray[np.float64], ...], a0: float, b0: float) -> Any:
-    return a0 * (x[0] ** 2) * np.log(x[0]) + b0
-
-
-def _model_polynomial(
-    x: tuple[npt.NDArray[np.float64], ...], a0: float, b0: float, c: float
-) -> Any:
-    return a0 * x[0] ** c + b0
-
-
-_MODELS_FUNCS_1D = {
-    "1": _model_constant,
-    "log(n)": _model_log_n,
-    "n*log(n)": _model_n_log_n,
-    "n": _model_linear,
-    "n^2": _model_n_squared,
-    "n^3": _model_n_cubed,
-    "n^2*log(n)": _model_n_squared_log_n,
-    "n^c": _model_polynomial,
-}
-
-
-def _model_n_plus_m(x: tuple[npt.NDArray[np.float64], ...], a0: float, a1: float, b0: float) -> Any:
-    return a0 * x[0] + a1 * x[1] + b0
-
-
-def _model_n_times_m(x: tuple[npt.NDArray[np.float64], ...], a0: float, b0: float) -> Any:
-    return a0 * x[0] * x[1] + b0
-
-
-def _model_n_squared_times_m(x: tuple[npt.NDArray[np.float64], ...], a0: float, b0: float) -> Any:
-    return a0 * (x[0] ** 2) * x[1] + b0
-
-
-def _model_n_times_m_squared(x: tuple[npt.NDArray[np.float64], ...], a0: float, b0: float) -> Any:
-    return a0 * x[0] * (x[1] ** 2) + b0
-
-
-def _model_k_n_times_m(
-    x: tuple[npt.NDArray[np.float64], ...], k: float, a0: float, b0: float
-) -> Any:
-    return a0 * (k ** x[0]) * x[1] + b0
-
-
-_MODELS_FUNCS_2D = {
-    "n+m": _model_n_plus_m,
-    "n*m": _model_n_times_m,
-    "n^2*m": _model_n_squared_times_m,
-    "n*m^2": _model_n_times_m_squared,
-    "k^n*m": _model_k_n_times_m,
-}
+_MODELS_EXPRESSIONS_1D = ["1", "log(n)", "n*log(n)", "n", "n^2", "n^3", "n^2*log(n)", "n^c"]
+_MODELS_EXPRESSIONS_2D = [
+    "n+m",
+    "n*m",
+    "n*m+n+m",
+    "n^3+n^2+n+m",
+    "n*m+n^3+n^2+n+m*log(m)+m",
+    "n*m+n^3+n^2+n+m",
+    "n^2*m",
+    "n*m^2",
+    "k^n*m",
+]
 
 
 class ComplexityFitter:
@@ -101,7 +83,7 @@ class ComplexityFitter:
         self.df = df
         if isinstance(xs, Var):
             self.xs = (xs,)
-        elif isinstance(xs, tuple) and len(xs) == 2:
+        elif isinstance(xs, tuple) and len(xs) <= 2:
             self.xs = xs
         else:
             raise ValueError("Only 1D and 2D models are supported.")
@@ -116,29 +98,40 @@ class ComplexityFitter:
         return best_name, results[best_name]
 
     def _fitnd(
-        self, *, model_funcs: dict[str, Any], xs: tuple[Var, ...], y: Var
+        self, *, model_expressions: list[str], xs: tuple[Var, ...], y: Var
     ) -> dict[str, lmfit.model.ModelResult]:
         results: dict[str, lmfit.model.ModelResult] = {}
         x_data = tuple(self.df[var.id].to_numpy() for var in xs)
         y_data = self.df[y.id].to_numpy()
-        for name, func in model_funcs.items():
+
+        gen_var_names: tuple[str, ...]
+        if len(xs) == 1:
+            gen_var_names = ("n",)
+        elif len(xs) == 2:
+            gen_var_names = ("n", "m")
+        else:
+            raise ValueError("Only 1D and 2D models are supported.")
+
+        for name in model_expressions:
+            func = _generate_model_func(name, gen_var_names)
             model = lmfit.Model(func, independent_vars=["x"])
             params = model.make_params()
 
             for param_name in params:
                 if param_name.startswith("a"):
-                    params[param_name].set(value=1.0, min=0.0)
+                    params[param_name].set(value=1.0)
                 elif param_name.startswith("b"):
                     params[param_name].set(value=0.0)
                 elif param_name.startswith("k"):
-                    params[param_name].set(value=1.0, min=0.0)
+                    params[param_name].set(value=1.0)
                 else:
                     params[param_name].set(value=1.0)
 
-            results[name] = model.fit(y_data, params, x=x_data)
-            print("Fitted model:", name)
-            print(results[name].fit_report())
-            print()
+            try:
+                results[name] = model.fit(y_data, params, x=x_data)
+            except Exception:
+                log.exception(f"Error fitting model {name}")
+                continue
         return results
 
     def _plot2d(self, result: lmfit.model.ModelResult) -> Figure:
@@ -182,10 +175,10 @@ class ComplexityFitter:
         return f
 
     def _fit1d(self) -> None:
-        self.results = self._fitnd(model_funcs=_MODELS_FUNCS_1D, xs=self.xs, y=self.y)
+        self.results = self._fitnd(model_expressions=_MODELS_EXPRESSIONS_1D, xs=self.xs, y=self.y)
 
     def _fit2d(self) -> None:
-        self.results = self._fitnd(model_funcs=_MODELS_FUNCS_2D, xs=self.xs, y=self.y)
+        self.results = self._fitnd(model_expressions=_MODELS_EXPRESSIONS_2D, xs=self.xs, y=self.y)
 
     def fit(self) -> tuple[str, lmfit.model.ModelResult]:
         if len(self.xs) == 1:
