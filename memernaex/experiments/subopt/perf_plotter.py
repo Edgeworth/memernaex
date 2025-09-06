@@ -1,4 +1,5 @@
 # Copyright 2022 Eliot Courtney.
+import sys
 from pathlib import Path
 
 import polars as pl
@@ -45,6 +46,8 @@ VAR_USER_SEC = Var(id="user_sec", name="User time (s)", dtype=pl.Float64)
 VAR_SYS_SEC = Var(id="sys_sec", name="Sys time (s)", dtype=pl.Float64)
 VAR_REAL_SEC = Var(id="real_sec", name="Wall time (s)", dtype=pl.Float64)
 VAR_FAILED = Var(id="failed", name="Failed", dtype=pl.Boolean)
+VAR_NODES = Var(id="nodes", name="Nodes", dtype=pl.Int64)
+VAR_EXPANSIONS = Var(id="expansions", name="Expansions", dtype=pl.Int64)
 VAR_STRUCS_PER_SEC = Var(
     id="strucs_per_sec", name="Structures per second", dtype=pl.Float64, derived=True
 )
@@ -75,14 +78,18 @@ DEPENDENT_VARS: list[str] = [
     VAR_BASES_PER_BYTE.id,
 ]
 
+STATS_DEPENDENT_VARS: list[str] = [*DEPENDENT_VARS, VAR_NODES.id, VAR_EXPANSIONS.id]
+
 
 class SuboptPerfPlotter:
     df: pl.DataFrame
+    is_stats: bool
     output_dir: Path
 
-    def __init__(self, input_path: Path, output_dir: Path) -> None:
+    def __init__(self, input_path: Path, output_dir: Path, is_stats: bool) -> None:
         self.output_dir = output_dir
-        self.df = read_var_data(self.__class__, input_path)
+        self.is_stats = is_stats
+        self.df = read_var_data(sys.modules[type(self).__module__], input_path)
 
         # Remove any rows with failed true.
         self.df = self.df.filter(~pl.col(VAR_FAILED.id))
@@ -149,6 +156,45 @@ class SuboptPerfPlotter:
                     f.show()
                     plt.show(block=True)
 
+    def _analyze_stats(self) -> None:
+        # Average all dependent variables.
+        df = self.df.group_by(PACKAGE_VARS + GROUP_VARS + [VAR_RNA_LENGTH.id]).agg(
+            pl.col(STATS_DEPENDENT_VARS).mean()
+        )
+
+        # Filter out rows with RNA length less than 100 to avoid noise.
+        # Just a heuristic.
+        df = df.filter(pl.col(VAR_RNA_LENGTH.id) >= 100)
+
+        # Filter out rows with no structures generated.
+        df = df.filter(pl.col(VAR_OUTPUT_STRUCS.id) > 0)
+
+        for group, group_df in df.group_by(PACKAGE_VARS):
+            for split_var in [VAR_DELTA, VAR_STRUCS]:
+                split_df = group_df.filter(pl.col(split_var.id).str.len_chars() > 0)
+                for dependent in [VAR_NODES, VAR_EXPANSIONS, VAR_OUTPUT_STRUCS]:
+                    group_name = (
+                        "_".join(str(x) for x in group) + f"_{split_var.id}" + f"_{dependent.id}"
+                    )
+                    print(group_name)
+                    if len(split_df) == 0:
+                        print("No data for this group.")
+                        continue
+                    fitter = ComplexityFitter(
+                        df=split_df, xs=(VAR_RNA_LENGTH, split_var), y=dependent
+                    )
+                    name, result = fitter.fit()
+                    print(f"Best model: {name}")
+                    print(result.fit_report())
+                    print()
+                    f = fitter.plot(name)
+                    f.show()
+                    plt.show(block=True)
+
     def run(self) -> None:
         # self._plot_quantity("quantity")
-        self._analyze_complexity()
+        # self._analyze_complexity()
+        if self.is_stats:
+            self._analyze_stats()
+        else:
+            self._analyze_complexity()

@@ -1,5 +1,5 @@
 # Copyright 2016 Eliot Courtney.
-import os
+import subprocess
 from pathlib import Path
 
 import cloup
@@ -12,5 +12,5 @@ import cloup
     nargs=-1,
 )
 def crop_image(files: list[Path]) -> None:
-    for i in files:
-        os.system(f"convert {i} -trim {i}")
+    for path in files:
+        subprocess.run(["convert", str(path), "-trim", str(path)], check=True)

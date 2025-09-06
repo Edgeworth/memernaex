@@ -66,15 +66,18 @@ def plot_mean_log_quantity(
         if logy:
             df_model = df_model.with_columns(pl.col(y.id).log10())
 
-        mod = smf.ols(f"{y} ~ {x}", data=df_model.to_pandas())
+        df_model_pd = df_model.to_pandas()
+        mod = smf.ols(f"{y.id} ~ {x.id}", data=df_model_pd)
         res = mod.fit()
 
-        b, a = res.params.tolist()
-        sign = "-" if b < 0 else "+"
-        label = f"{group_name}\n${a:.5f}x {sign} {abs(b):.2f}$\n$R^2 = {res.rsquared:.3f}$"
+        intercept, slope = res.params.tolist()
+        sign = "-" if intercept < 0 else "+"
+        label = (
+            f"{group_name}\n${slope:.5f}x {sign} {abs(intercept):.2f}$\n$R^2 = {res.rsquared:.3f}$"
+        )
 
         sns.regplot(
-            data=df_model.to_pandas(),
+            data=df_model_pd,
             x=x.id,
             y=y.id,
             label=label,

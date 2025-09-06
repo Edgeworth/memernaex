@@ -61,6 +61,12 @@ def _generate_model_func(expr: str, var_names: tuple[str, ...]) -> Callable[...,
 
 _MODELS_EXPRESSIONS_1D = ["1", "log(n)", "n*log(n)", "n", "n^2", "n^3", "n^2*log(n)", "n^c"]
 _MODELS_EXPRESSIONS_2D = [
+    "n",
+    "m",
+    "n^2",
+    "m^2",
+    "n^3",
+    "m^3",
     "n+m",
     "n*m",
     "n*m+n+m",
@@ -70,6 +76,8 @@ _MODELS_EXPRESSIONS_2D = [
     "n^2*m",
     "n*m^2",
     "k^n*m",
+    "k^m",
+    "k^n",
 ]
 
 
